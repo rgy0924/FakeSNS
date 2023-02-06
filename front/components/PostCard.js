@@ -11,7 +11,7 @@ import moment from 'moment';
 import PostImages from './PostImages';
 import CommentForm from './CommentForm';
 import PostCardContent from './PostCardContent';
-import { LIKE_POST_REQUEST, REMOVE_POST_REQUEST, UNLIKE_POST_REQUEST, RETWEET_REQUEST } from '../reducers/post';
+import { LIKE_POST_REQUEST, REMOVE_POST_REQUEST, UNLIKE_POST_REQUEST, RETWEET_REQUEST, UPDATE_POST_REQUEST } from '../reducers/post';
 import FollowButton from './FollowButton';
 
 const PostCard = ({ post }) => {
@@ -19,10 +19,29 @@ const PostCard = ({ post }) => {
   const { removePostLoading } = useSelector((state) => state.post);
   const [commentFormOpened, setCommentFormOpened] = useState(false);
   const id = useSelector((state) => state.user.me?.id);
+  const [editMode, setEditMode] = useState(false);
+
+  const onClickUpdate = useCallback(() => {
+    setEditMode(true);
+  }, []);
+
+  const onCancelUpdate = useCallback(() => {
+    setEditMode(false);
+  }, []);
+
+  const onChangePost = useCallback((editText) => () => {
+    dispatch({
+      type: UPDATE_POST_REQUEST,
+      data: {
+        PostId: post.id,
+        content: editText,
+      },
+    });
+  }, [post]);
 
   const onLike = useCallback(() => {
     if (!id) {
-      return alert('Login Require');
+      return alert('Login Required');
     }
     return dispatch({
       type: LIKE_POST_REQUEST,
@@ -31,7 +50,7 @@ const PostCard = ({ post }) => {
   }, [id]);
   const onUnlike = useCallback(() => {
     if (!id) {
-      return alert('Login Require');
+      return alert('Login Required');
     }
     return dispatch({
       type: UNLIKE_POST_REQUEST,
@@ -44,7 +63,7 @@ const PostCard = ({ post }) => {
 
   const onRemovePost = useCallback(() => {
     if (!id) {
-      return alert('Login Require');
+      return alert('Login Required');
     }
     return dispatch({
       type: REMOVE_POST_REQUEST,
@@ -54,7 +73,7 @@ const PostCard = ({ post }) => {
 
   const onRetweet = useCallback(() => {
     if (!id) {
-      return alert('Login Require');
+      return alert('Login Required');
     }
     return dispatch({
       type: RETWEET_REQUEST,
@@ -80,8 +99,8 @@ const PostCard = ({ post }) => {
                 {id && post.User.id === id
                   ? (
                     <>
-                      <Button>Edit</Button>
-                      <Button type="danger" loading={removePostLoading} onClick={onRemovePost}>Delete</Button>
+                      {!post.RetweetId && <Button onClick={onClickUpdate}>Edit</Button>}
+                      <Button type="danger" loading={removePostLoading} onClick={onRemovePost}>Remove</Button>
                     </>
                   )
                   : <Button>Report</Button>}
@@ -91,7 +110,7 @@ const PostCard = ({ post }) => {
             <EllipsisOutlined />
           </Popover>,
         ]}
-        title={post.RetweetId ? `${post.User.nickname} retweet your post` : null}
+        title={post.RetweetId ? `${post.User.nickname} share your post` : null}
         extra={id && <FollowButton post={post} />}
       >
         {post.RetweetId && post.Retweet
@@ -99,29 +118,29 @@ const PostCard = ({ post }) => {
             <Card
               cover={post.Retweet.Images[0] && <PostImages images={post.Retweet.Images} />}
             >
-              <div style={{ float: 'right' }}>{moment(post.createdAt).format('YYYY.MM.DD')}</div>
+              <div style={{ float: 'right' }}>{moment().format('YYYY.MM.DD')}</div>
               <Card.Meta
                 avatar={(
-                  <Link href={`/user/${post.Retweet.User.id}`}>
+                  <Link href={`/user/${post.Retweet.User.id}`} prefetch={false}>
                     <a><Avatar>{post.Retweet.User.nickname[0]}</Avatar></a>
                   </Link>
                 )}
                 title={post.Retweet.User.nickname}
-                description={<PostCardContent postData={post.Retweet.content} />}
+                description={<PostCardContent postData={post.Retweet.content} onChangePost={onChangePost} onCancelUpdate={onCancelUpdate} />}
               />
             </Card>
           )
           : (
             <>
-              <div style={{ float: 'right' }}>{moment(post.createdAt).format('YYYY.MM.DD')}</div>
+              <div style={{ float: 'right' }}>{moment().format('YYYY.MM.DD')}</div>
               <Card.Meta
                 avatar={(
-                  <Link href={`/user/${post.User.id}`}>
+                  <Link href={`/user/${post.User.id}`} prefetch={false}>
                     <a><Avatar>{post.User.nickname[0]}</Avatar></a>
                   </Link>
                 )}
                 title={post.User.nickname}
-                description={<PostCardContent postData={post.content} />}
+                description={<PostCardContent editMode={editMode} onChangePost={onChangePost} onCancelUpdate={onCancelUpdate} postData={post.content} />}
               />
             </>
           )}
@@ -138,7 +157,7 @@ const PostCard = ({ post }) => {
                 <Comment
                   author={item.User.nickname}
                   avatar={(
-                    <Link href={`/user/${item.User.id}`}>
+                    <Link href={`/user/${item.User.id}`} prefetch={false}>
                       <a><Avatar>{item.User.nickname[0]}</Avatar></a>
                     </Link>
                   )}
@@ -151,7 +170,7 @@ const PostCard = ({ post }) => {
       )}
     </div>
   );
-};
+}
 
 PostCard.propTypes = {
   post: PropTypes.shape({
